@@ -1,0 +1,56 @@
+name: Build BioGuard Installer
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Kodni yuklab olish
+      uses: actions/checkout@v4
+
+    - name: Python 3.11 o'rnatish
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        architecture: 'x64'
+
+    - name: Kutubxonalar o'rnatish
+      run: |
+        pip install pywebview>=4.4.1 pywin32 keyboard opencv-python>=4.8.0 Pillow>=10.0.0 pyinstaller
+
+    - name: Icon yaratish
+      run: |
+        python -c "
+        from PIL import Image, ImageDraw
+        img = Image.new('RGBA', (256,256), (4,8,18,255))
+        d = ImageDraw.Draw(img)
+        d.ellipse([40,40,216,216], fill=(0,180,255,255))
+        d.ellipse([80,80,176,176], fill=(4,8,18,255))
+        d.rectangle([120,90,136,166], fill=(0,180,255,255))
+        img.save('icon.ico', format='ICO', sizes=[(256,256),(128,128),(64,64),(32,32),(16,16)])
+        print('icon.ico yaratildi')
+        "
+
+    - name: PyInstaller bilan EXE yaratish
+      run: |
+        pyinstaller bioguard.spec --noconfirm
+
+    - name: Inno Setup o'rnatish
+      run: |
+        choco install innosetup --no-progress -y
+
+    - name: Installer yaratish
+      run: |
+        & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" bioguard_installer.iss
+
+    - name: Tayyor faylni yuklash
+      uses: actions/upload-artifact@v4
+      with:
+        name: BioGuard-Installer
+        path: installer_output\BioGuard_Setup_v1.0.0.exe
+        retention-days: 30

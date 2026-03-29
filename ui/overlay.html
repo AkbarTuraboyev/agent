@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<title>AD BioGuard — Overlay</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+
+:root {
+  --bg:      #020810;
+  --accent:  #0ea5e9;
+  --head:    #38bdf8;
+  --food:    #4ade80;
+  --danger:  #f43f5e;
+  --muted:   #1e3a5f;
+  --dim:     #0a1628;
+  --score:   #1a3050;
+
+  --hdr-h: 40px;
+  --ftr-h: 30px;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+html, body {
+  width:100vw; height:100vh;
+  overflow:hidden;
+  background:var(--bg);
+  font-family:'Share Tech Mono','Courier New',monospace;
+  cursor:none;
+  user-select:none;
+}
+
+/* ── background grid ── */
+#bg {
+  position:fixed; inset:0;
+  background-image:
+    linear-gradient(rgba(14,165,233,.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(14,165,233,.035) 1px, transparent 1px);
+  background-size:48px 48px;
+  animation:drift 30s linear infinite;
+  pointer-events:none;
+}
+@keyframes drift { to { background-position:48px 48px; } }
+
+#scan {
+  position:fixed; inset:0;
+  background:repeating-linear-gradient(
+    0deg, transparent, transparent 3px,
+    rgba(0,0,0,.07) 3px, rgba(0,0,0,.07) 4px
+  );
+  pointer-events:none; z-index:1;
+}
+
+/* ── corner brackets ── */
+.brk {
+  position:fixed; width:28px; height:28px;
+  border-color:var(--muted); border-style:solid;
+  opacity:.35; z-index:20;
+}
+.brk.tl{top:10px;left:10px;border-width:1px 0 0 1px}
+.brk.tr{top:10px;right:10px;border-width:1px 1px 0 0}
+.brk.bl{bottom:10px;left:10px;border-width:0 0 1px 1px}
+.brk.br{bottom:10px;right:10px;border-width:0 1px 1px 0}
+
+/* ── header ── */
+#hdr {
+  position:fixed; top:0; left:0; right:0;
+  height:var(--hdr-h);
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 18px;
+  border-bottom:1px solid rgba(14,165,233,.06);
+  z-index:15;
+}
+#hdr-logo {
+  font-family:'Orbitron',monospace; font-size:10px; font-weight:700;
+  color:var(--muted); letter-spacing:4px;
+}
+#hdr-logo b { color:rgba(14,165,233,.5); }
+#hdr-right {
+  font-size:8px; color:var(--score); letter-spacing:2px;
+  display:flex; align-items:center; gap:8px;
+}
+#pulse {
+  width:5px; height:5px; border-radius:50%;
+  animation:pdot 2.4s ease-in-out infinite;
+}
+@keyframes pdot {
+  0%,100%{background:var(--muted);opacity:.3}
+  50%{background:var(--accent);opacity:1}
+}
+
+/* ── footer ── */
+#ftr {
+  position:fixed; bottom:0; left:0; right:0;
+  height:var(--ftr-h);
+  display:flex; align-items:center; justify-content:center; gap:40px;
+  border-top:1px solid rgba(14,165,233,.04);
+  font-size:8px; color:var(--score); letter-spacing:2px;
+  z-index:15;
+}
+
+/* ── main layout — flex column, fills space between header and footer ── */
+#wrap {
+  position:fixed;
+  top:var(--hdr-h);
+  bottom:var(--ftr-h);
+  left:0; right:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  z-index:10;
+  /* small inner padding so content never kisses the chrome */
+  padding:8px 8px;
+  gap:8px;
+}
+
+/* ── score row — fixed height, never grows ── */
+#score-row {
+  flex:0 0 auto;
+  display:flex; align-items:baseline; gap:20px;
+}
+.s-lbl { font-size:8px; color:var(--score); letter-spacing:3px; }
+#score-val {
+  font-family:'Orbitron',monospace; font-size:20px; font-weight:700;
+  color:var(--dim); transition:color .1s, text-shadow .1s;
+}
+#score-val.pop {
+  color:var(--accent) !important;
+  text-shadow:0 0 16px var(--accent);
+}
+#hi-val {
+  font-family:'Orbitron',monospace; font-size:11px; color:var(--score);
+}
+
+/* ── canvas wrapper — takes all remaining vertical space ── */
+#cvs-wrap {
+  flex:1 1 auto;
+  /* stay within horizontal bounds */
+  max-width:100%;
+  /* inner decoration */
+  border:1px solid rgba(14,165,233,.1);
+  box-shadow:
+    0 0 60px rgba(2,8,16,.95),
+    inset 0 0 80px rgba(2,8,16,.5),
+    0 0 0 1px rgba(14,165,233,.03);
+  position:relative;
+  /* canvas itself is sized by JS to fill this box */
+  overflow:hidden;
+}
+#cvs-wrap::after {
+  content:'';
+  position:absolute; inset:0;
+  background:linear-gradient(135deg,
+    rgba(14,165,233,.05) 0%, transparent 50%,
+    rgba(6,182,212,.03) 100%);
+  pointer-events:none;
+}
+canvas { display:block; }
+
+/* ── keys hint — fixed height, never grows ── */
+#keys-hint {
+  flex:0 0 auto;
+  display:flex; align-items:center; gap:4px;
+  font-size:8px; color:var(--score); letter-spacing:1px;
+}
+.key {
+  display:inline-flex; align-items:center; justify-content:center;
+  width:20px; height:18px;
+  border:1px solid var(--dim); border-radius:3px;
+  color:var(--muted); font-size:9px;
+  background:rgba(14,165,233,.03);
+}
+
+/* ── start / game-over overlay ── */
+#ov {
+  position:fixed; inset:0;
+  display:none; flex-direction:column;
+  align-items:center; justify-content:center; gap:14px;
+  background:rgba(2,8,16,.93);
+  backdrop-filter:blur(4px);
+  z-index:60;
+}
+#ov.show { display:flex; }
+
+#ov-title {
+  font-family:'Orbitron',monospace; font-weight:900;
+  font-size:clamp(28px,5vw,60px);
+  letter-spacing:8px; text-align:center;
+  animation:glitch 4s infinite;
+}
+#ov-title.go { color:var(--danger); text-shadow:0 0 40px rgba(244,63,94,.5); }
+#ov-title.st { color:var(--accent); text-shadow:0 0 40px rgba(14,165,233,.4); }
+
+@keyframes glitch {
+  0%,90%,100%{ transform:none; filter:none }
+  92%{ transform:translate(3px,-2px); filter:hue-rotate(30deg) }
+  94%{ transform:translate(-2px,1px); filter:hue-rotate(-20deg) }
+  96%{ transform:none; filter:none }
+}
+
+#ov-sub { font-size:clamp(9px,1.2vw,12px); color:var(--muted); letter-spacing:3px; }
+#ov-score {
+  font-family:'Orbitron',monospace; font-size:14px;
+  color:var(--score); letter-spacing:4px; display:none;
+}
+
+/* ── floating particles ── */
+#particles { position:fixed; inset:0; pointer-events:none; z-index:3; overflow:hidden; }
+.pt {
+  position:absolute; border-radius:50%;
+  background:rgba(14,165,233,.35);
+  animation:fall linear infinite;
+}
+@keyframes fall {
+  0%  { transform:translateY(-20px); opacity:0; }
+  10% { opacity:.5; }
+  90% { opacity:.15; }
+  100%{ transform:translateY(101vh); opacity:0; }
+}
+</style>
+</head>
+<body>
+
+<div id="bg"></div>
+<div id="scan"></div>
+<div class="brk tl"></div><div class="brk tr"></div>
+<div class="brk bl"></div><div class="brk br"></div>
+<div id="particles"></div>
+
+<div id="hdr">
+  <div id="hdr-logo">AD <b>BIO</b>GUARD</div>
+  <div id="hdr-right">
+    <div id="pulse"></div>
+    <span>IDENTITY VERIFICATION SYSTEM</span>
+  </div>
+</div>
+
+<div id="wrap">
+  <div id="score-row">
+    <span class="s-lbl">SCORE</span>
+    <span id="score-val">0</span>
+    <span class="s-lbl">BEST</span>
+    <span id="hi-val">0</span>
+  </div>
+
+  <div id="cvs-wrap"><canvas id="cvs"></canvas></div>
+
+  <div id="keys-hint">
+    <span class="key">↑</span><span class="key">↓</span>
+    <span class="key">←</span><span class="key">→</span>
+    <span style="margin-left:8px">HARAKATLANISH &nbsp;|&nbsp; ENTER — QAYTA BOSHLASH</span>
+  </div>
+</div>
+
+<div id="ftr">
+  <span>SECURE SESSION ACTIVE</span>
+  <span id="clock"></span>
+  <span>AD SECURITY v2.0</span>
+</div>
+
+<div id="ov" class="show">
+  <div id="ov-title" class="st">ILON</div>
+  <div id="ov-sub">BOSHLASH: ENTER YOKI O'Q TUGMALAR</div>
+  <div id="ov-score"></div>
+</div>
+
+<script>
+const CELL = 20;
+const BG   = '#020810';
+
+const cvs     = document.getElementById('cvs');
+const ctx     = cvs.getContext('2d');
+const cvsWrap = document.getElementById('cvs-wrap');
+
+// ── canvas sizing ────────────────────────────────────────────────────────────
+// Use window.innerWidth/innerHeight — Chromium always keeps these in sync
+// with the actual window client rect, even before flex layout is calculated.
+// cvsWrap.clientWidth returns 0 when measured too early; innerWidth never does.
+
+const HDR_H  = 40;   // matches --hdr-h in CSS
+const FTR_H  = 30;   // matches --ftr-h in CSS
+const ROW_H  = 36;   // score-row height + gap
+const KEYS_H = 30;   // keys-hint height + gap
+const PAD    = 16;   // #wrap padding + flex gap
+
+function computeSize() {
+  const avW = window.innerWidth  - 2;          // 1px border each side
+  const avH = window.innerHeight - HDR_H - FTR_H - ROW_H - KEYS_H - PAD;
+
+  const cols = Math.max(10, Math.floor(avW / CELL));
+  const rows = Math.max(10, Math.floor(avH / CELL));
+
+  const canvasW = cols * CELL;
+  const canvasH = rows * CELL;
+
+  cvs.width  = canvasW;
+  cvs.height = canvasH;
+
+  cvsWrap.style.width  = canvasW + 'px';
+  cvsWrap.style.height = canvasH + 'px';
+
+  return { cols, rows };
+}
+
+let { cols, rows } = { cols: 20, rows: 20 }; // temp until first measurement
+
+// ── game state ───────────────────────────────────────────────────────────────
+let snake, dir, nextDir, food, score, speed, running;
+let hiScore = (() => {
+  try { return parseInt(localStorage.getItem('bg_hi') || '0'); } catch { return 0; }
+})();
+document.getElementById('hi-val').textContent = hiScore;
+
+function init() {
+  ({ cols, rows } = computeSize());
+  const cx = Math.floor(cols / 2);
+  const cy = Math.floor(rows / 2);
+  snake   = [[cx,cy],[cx-1,cy],[cx-2,cy]];
+  dir     = [1,0]; nextDir = [1,0];
+  score   = 0; speed = 140; running = true;
+  placeFood();
+  setScore(0);
+}
+
+function placeFood() {
+  let fx, fy;
+  do {
+    fx = 1 + Math.floor(Math.random() * (cols - 2));
+    fy = 1 + Math.floor(Math.random() * (rows - 2));
+  } while (snake.some(s => s[0] === fx && s[1] === fy));
+  food = [fx, fy];
+}
+
+// ── draw ─────────────────────────────────────────────────────────────────────
+function draw() {
+  ctx.fillStyle = BG;
+  ctx.fillRect(0, 0, cvs.width, cvs.height);
+
+  // grid lines
+  ctx.strokeStyle = 'rgba(14,165,233,0.04)';
+  ctx.lineWidth = .5;
+  for (let x = 0; x <= cvs.width; x += CELL) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, cvs.height); ctx.stroke();
+  }
+  for (let y = 0; y <= cvs.height; y += CELL) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(cvs.width, y); ctx.stroke();
+  }
+
+  // food
+  const t = Date.now() / 500;
+  const glow = .5 + .5 * Math.sin(t);
+  ctx.save();
+  ctx.shadowBlur = 10 + glow * 14; ctx.shadowColor = '#4ade80';
+  ctx.fillStyle  = '#4ade80';
+  ctx.beginPath();
+  ctx.arc(food[0] * CELL + CELL / 2, food[1] * CELL + CELL / 2, CELL * .38, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // snake
+  snake.forEach(([sx, sy], i) => {
+    const px = sx*CELL+1, py = sy*CELL+1, sw = CELL-2, sh = CELL-2;
+    const r  = i === 0 ? 5 : 3;
+    ctx.save();
+    if (i === 0) { ctx.shadowBlur = 14; ctx.shadowColor = '#38bdf8'; }
+
+    const g = ctx.createLinearGradient(px, py, px+sw, py+sh);
+    if (i === 0) {
+      g.addColorStop(0, '#60c8f8'); g.addColorStop(1, '#0e70aa');
+    } else {
+      const d  = Math.min(i / snake.length, .85);
+      const rv = Math.round(14 - d*10);
+      const gv = Math.round(73 - d*60);
+      const bv = Math.round(122 - d*90);
+      g.addColorStop(0, `rgb(${rv+18},${gv+18},${bv+18})`);
+      g.addColorStop(1, `rgb(${rv},${gv},${bv})`);
+    }
+    ctx.fillStyle = g;
+
+    ctx.beginPath();
+    ctx.moveTo(px+r, py);
+    ctx.lineTo(px+sw-r, py); ctx.arcTo(px+sw, py, px+sw, py+r, r);
+    ctx.lineTo(px+sw, py+sh-r); ctx.arcTo(px+sw, py+sh, px+sw-r, py+sh, r);
+    ctx.lineTo(px+r, py+sh); ctx.arcTo(px, py+sh, px, py+sh-r, r);
+    ctx.lineTo(px, py+r); ctx.arcTo(px, py, px+r, py, r);
+    ctx.closePath(); ctx.fill();
+
+    if (i === 0) {
+      const [e1x,e1y,e2x,e2y] = eyes(sx, sy);
+      ctx.fillStyle = '#020810';
+      ctx.beginPath(); ctx.arc(e1x, e1y, 2, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(e2x, e2y, 2, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#93c5fd';
+      ctx.beginPath(); ctx.arc(e1x-.4, e1y-.4, .7, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(e2x-.4, e2y-.4, .7, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+  });
+}
+
+function eyes(sx, sy) {
+  const cx = sx*CELL + CELL/2, cy = sy*CELL + CELL/2;
+  const [dx, dy] = dir;
+  const ox = -dy*4, oy = dx*4;
+  const fx = cx + dx*4, fy = cy + dy*4;
+  return [fx+ox, fy+oy, fx-ox, fy-oy];
+}
+
+// ── game loop ─────────────────────────────────────────────────────────────────
+let last = 0;
+function frame(ts) {
+  requestAnimationFrame(frame);
+  if (!running) { draw(); return; }
+  if (ts - last >= speed) { last = ts; step(); }
+  draw();
+}
+
+function step() {
+  dir = [...nextDir];
+  let nx = (snake[0][0] + dir[0] + cols) % cols;
+  let ny = (snake[0][1] + dir[1] + rows) % rows;
+  if (snake.some(s => s[0] === nx && s[1] === ny)) { over(); return; }
+  snake.unshift([nx, ny]);
+  if (nx === food[0] && ny === food[1]) {
+    score += 10; setScore(score); placeFood();
+    if (speed > 55) speed -= 3; popScore();
+  } else { snake.pop(); }
+}
+
+function setScore(s) {
+  document.getElementById('score-val').textContent = s;
+  if (s > hiScore) {
+    hiScore = s;
+    try { localStorage.setItem('bg_hi', hiScore); } catch {}
+    document.getElementById('hi-val').textContent = hiScore;
+  }
+}
+function popScore() {
+  const el = document.getElementById('score-val');
+  el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
+  setTimeout(() => el.classList.remove('pop'), 300);
+}
+
+// ── game over ─────────────────────────────────────────────────────────────────
+function over() {
+  running = false;
+  const title = document.getElementById('ov-title');
+  title.className = 'go';
+  title.textContent = 'GAME OVER';
+  document.getElementById('ov-sub').textContent = "QAYTA BOSHLASH: ENTER YOKI O'Q TUGMALAR";
+  const os = document.getElementById('ov-score');
+  os.textContent = `NATIJA: ${score}`; os.style.display = 'block';
+  document.getElementById('ov').classList.add('show');
+}
+
+function startGame() {
+  document.getElementById('ov').classList.remove('show');
+  document.getElementById('ov-score').style.display = 'none';
+  init(); // re-measures canvas inside
+  requestAnimationFrame(frame);
+}
+
+// ── keyboard — only arrows + Enter, everything else blocked ──────────────────
+document.addEventListener('keydown', e => {
+  e.preventDefault();
+  e.stopImmediatePropagation();
+
+  if (!running) {
+    if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Enter'].includes(e.key))
+      startGame();
+    return;
+  }
+
+  const [dx, dy] = dir;
+  if      (e.key === 'ArrowUp'    && dy !==  1) nextDir = [0, -1];
+  else if (e.key === 'ArrowDown'  && dy !== -1) nextDir = [0,  1];
+  else if (e.key === 'ArrowLeft'  && dx !==  1) nextDir = [-1,  0];
+  else if (e.key === 'ArrowRight' && dx !== -1) nextDir = [ 1,  0];
+  else if (e.key === 'Enter' && !running) startGame();
+}, { capture: true });
+
+// ── clock ─────────────────────────────────────────────────────────────────────
+function tick() {
+  const n = new Date();
+  document.getElementById('clock').textContent =
+    [n.getHours(), n.getMinutes(), n.getSeconds()]
+      .map(v => String(v).padStart(2, '0')).join(':');
+}
+setInterval(tick, 1000); tick();
+
+// ── particles ─────────────────────────────────────────────────────────────────
+(function () {
+  const c = document.getElementById('particles');
+  for (let i = 0; i < 20; i++) {
+    const p = document.createElement('div'); p.className = 'pt';
+    const s = 1 + Math.random() * 2;
+    p.style.cssText = `
+      left:${Math.random()*100}vw;
+      top:${Math.random()*100}vh;
+      width:${s}px; height:${s}px;
+      animation-duration:${10 + Math.random()*18}s;
+      animation-delay:${-Math.random()*20}s;
+      opacity:${Math.random()*.4};
+    `;
+    c.appendChild(p);
+  }
+})();
+
+// ── resize — re-measure and re-init grid only (keep score intact) ─────────────
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    ({ cols, rows } = computeSize());
+    if (running) {
+      // nudge snake back inside new bounds
+      snake = snake.filter(([x, y]) => x < cols && y < rows);
+      if (snake.length < 1) { over(); return; }
+      placeFood();
+    }
+  }, 150);
+});
+
+// ── boot ──────────────────────────────────────────────────────────────────────
+// pywebview opens the window then resizes it via SetWindowPos. Chromium updates
+// window.innerWidth/innerHeight asynchronously. We poll until the value
+// stabilises (two consecutive reads agree) before doing the first layout.
+// Timeout: 3 seconds — after that we accept whatever size we have.
+window.addEventListener('load', () => {
+  let prev = 0;
+  let attempts = 0;
+  const MAX = 60; // 60 × 50ms = 3 s
+
+  function tryBoot() {
+    const cur = window.innerWidth;
+    if (cur > 0 && cur === prev) {
+      // Stable — do the real measurement
+      ({ cols, rows } = computeSize());
+      draw();
+    } else {
+      prev = cur;
+      attempts++;
+      if (attempts < MAX) {
+        setTimeout(tryBoot, 50);
+      } else {
+        // Give up waiting — use whatever we have
+        ({ cols, rows } = computeSize());
+        draw();
+      }
+    }
+  }
+
+  setTimeout(tryBoot, 50);
+});
+</script>
+</body>
+</html>

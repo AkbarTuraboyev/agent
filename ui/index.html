@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AD BioGuard</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+
+<div id="header">
+  <div class="header-brand">
+    <div class="brand-dot"></div>
+    <span>AD BioGuard</span>
+    <span style="opacity:0.3;margin:0 4px">|</span>
+    <span style="opacity:0.5;font-size:10px">IDENTITY VERIFICATION SYSTEM</span>
+  </div>
+  <div class="header-info">
+    <span id="header-user" class="header-user font-mono" style="font-size:11px"></span>
+    <span id="header-clock"></span>
+    <span id="header-mode" style="font-size:10px;color:var(--amber);display:none">● DEMO</span>
+  </div>
+</div>
+
+<div id="app">
+
+  <!-- INIT -->
+  <div id="screen-init" class="screen active">
+    <div class="card"><div class="corner-bl"></div>
+      <div class="card-inner" style="text-align:center;padding:48px 40px;">
+        <div class="spinner" style="margin:0 auto 20px"></div>
+        <div class="card-title">System Check</div>
+        <div class="card-heading">Initializing</div>
+        <div class="card-sub font-mono" id="init-status" style="margin-top:8px">
+          Establishing secure session...
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN SELECT: Face OR Fingerprint -->
+  <div id="screen-select" class="screen">
+    <div class="card"><div class="corner-bl"></div>
+      <div class="card-inner">
+        <div class="card-title">Biometric Authentication</div>
+        <div class="card-heading">Identity Verification</div>
+        <div class="card-sub font-mono" id="select-username"></div>
+        <div class="divider"></div>
+        <div class="screen-label">Select verification method</div>
+        <div class="method-grid">
+          <div class="method-card" onclick="App.selectMethod('face')">
+            <span class="method-card-icon">⬡</span>
+            <div class="method-card-title">Face Scan</div>
+            <div class="method-card-desc">Verify identity using<br>facial recognition</div>
+            <div class="method-card-badge" id="face-badge">
+              <span>●</span> <span id="face-badge-text">Available</span>
+            </div>
+          </div>
+          <div class="method-card" onclick="App.selectMethod('finger')">
+            <span class="method-card-icon">◈</span>
+            <div class="method-card-title">Fingerprint</div>
+            <div class="method-card-desc">Verify identity using<br>fingerprint biometrics</div>
+            <div class="method-card-badge">
+              <span>●</span> Available
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FACE SUB-SELECT: Webcam OR Phone QR -->
+  <div id="screen-face-select" class="screen">
+    <div class="card"><div class="corner-bl"></div>
+      <div class="card-inner">
+        <div class="card-title">Face Verification</div>
+        <div class="card-heading">Choose Device</div>
+        <div class="card-sub font-mono">How do you want to capture your face?</div>
+        <div class="divider"></div>
+        <div class="screen-label">Select input device</div>
+        <div class="method-grid">
+          <div class="method-card" id="card-face-webcam" onclick="App.startFaceWebcam()">
+            <span class="method-card-icon">📷</span>
+            <div class="method-card-title">Webcam</div>
+            <div class="method-card-desc">Use this PC's camera<br>for face capture</div>
+            <div class="method-card-badge" id="webcam-badge">
+              <span>●</span> <span id="webcam-badge-text">Available</span>
+            </div>
+          </div>
+          <div class="method-card" onclick="App.startFaceQR()">
+            <span class="method-card-icon">📱</span>
+            <div class="method-card-title">Phone Camera</div>
+            <div class="method-card-desc">Scan QR, capture face<br>using your phone</div>
+            <div class="method-card-badge">
+              <span>●</span> Available
+            </div>
+          </div>
+        </div>
+        <div class="btn-row" style="margin-top:20px">
+          <button class="btn btn-ghost btn-sm" onclick="App.goBack()">← Back</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FACE WEBCAM -->
+  <div id="screen-face" class="screen">
+    <div class="card"><div class="corner-bl"></div>
+      <div class="card-inner">
+        <div class="card-title">Face Verification · Webcam</div>
+        <div class="card-heading">Face Scan</div>
+        <div class="card-sub font-mono">Position your face within the frame</div>
+        <div class="divider"></div>
+        <div class="cam-wrap">
+          <video id="camera-video" autoplay playsinline muted></video>
+          <canvas id="camera-canvas" style="display:none"></canvas>
+          <div class="face-overlay">
+            <div class="face-ring"></div>
+            <div class="scan-line"></div>
+          </div>
+          <div class="cam-corner tl"></div>
+          <div class="cam-corner tr"></div>
+          <div class="cam-corner bl"></div>
+          <div class="cam-corner br"></div>
+        </div>
+        <div class="status-row">
+          <div class="status-indicator active" id="face-indicator"></div>
+          <div class="status-text" id="face-status-text">Camera active — look at the camera</div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="capture-btn" onclick="App.captureFrame()">
+            ⊙ &nbsp; Capture &amp; Verify
+          </button>
+          <button class="btn btn-ghost" onclick="App.goBack()">← Back</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FACE VIA PHONE QR -->
+  <div id="screen-face-qr" class="screen">
+    <div class="card"><div class="corner-bl"></div>
+      <div class="card-inner">
+        <div class="card-title">Face Verification · Phone</div>
+        <div class="card-heading">Phone Camera</div>
+        <div class="card-sub font-mono">Scan QR → phone opens camera → captures face</div>
+        <div class="divider"></div>
+        <div class="qr-wrap">
+          <div style="position:relative">
+            <div class="qr-frame">
+              <div class="qr-generating font-mono" id="face-qr-loading">
+                <div class="spinner" style="margin:0 auto 10px"></div>
+                Generating...
+              </div>
+              <div id="face-qr-code" style="display:none"></div>
+            </div>
+            <div class="qr-corner tl"></div>
+            <div class="qr-corner tr"></div>
+            <div class="qr-corner bl"></div>
+            <div class="qr-corner br"></div>
+          </div>
+          <div class="status-row" style="width:100%;margin-bottom:0">
+            <div class="qr-blink" id="face-qr-blink"></div>
+            <div class="status-text" id="face-qr-status">Waiting for phone...</div>
+            <div style="margin-left:auto;font-family:var(--font-mono);font-size:11px;
+                        color:var(--text-muted)" id="face-qr-timer"></div>
+          </div>
+          <div class="timer-bar-wrap" style="width:100%">
+            <div class="timer-bar" id="face-timer-bar"></div>
+          </div>
+        </div>
+        <div class="btn-row" style="margin-top:16px">
+          <button class="btn btn-ghost" onclick="App.goBack()">← Back</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FINGER SUB-SELECT: Phone QR OR USB -->
+  <div id="screen-finger-select" class="screen">
+    <div class="card"><div class="corner-bl"></div>
+      <div class="card-inner">
+        <div class="card-title">Fingerprint Verification</div>
+        <div class="card-heading">Choose Device</div>
+        <div class="card-sub font-mono">How do you want to scan your fingerprint?</div>
+        <div class="divider"></div>
+        <div class="screen-label">Select input device</div>
+        <div class="method-grid">
+          <div class="method-card" onclick="App.startFingerQR()">
+            <span class="method-card-icon">📱</span>
+            <div class="method-card-title">Phone / QR</div>
+            <div class="method-card-desc">Scan QR with phone,<br>use phone fingerprint</div>
+            <div class="method-card-badge">
+              <span>●</span> Available
+            </div>
+          </div>
+          <div class="method-card disabled">
+            <span class="method-card-icon">🔌</span>
+            <div class="method-card-title">USB Scanner</div>
+            <div class="method-card-desc">Connect USB fingerprint<br>scanner device</div>
+            <div class="method-card-badge unavailable">
+              <span>○</span> Coming Soon
+            </div>
+          </div>
+        </div>
+        <div class="btn-row" style="margin-top:20px">
+          <button class="btn btn-ghost btn-sm" onclick="App.goBack()">← Back</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FINGER QR -->
+  <div id="screen-finger" class="screen">
+    <div class="card"><div class="corner-bl"></div>
+      <div class="card-inner">
+        <div class="card-title">Fingerprint Verification · Phone</div>
+        <div class="card-heading">Phone Authentication</div>
+        <div class="card-sub font-mono">Scan the QR code with your mobile device</div>
+        <div class="divider"></div>
+        <div class="qr-wrap">
+          <div style="position:relative">
+            <div class="qr-frame" id="qr-frame">
+              <div class="qr-generating font-mono" id="qr-loading">
+                <div class="spinner" style="margin:0 auto 10px"></div>
+                Generating...
+              </div>
+              <div id="qr-code" style="display:none"></div>
+            </div>
+            <div class="qr-corner tl"></div>
+            <div class="qr-corner tr"></div>
+            <div class="qr-corner bl"></div>
+            <div class="qr-corner br"></div>
+          </div>
+          <div class="status-row" style="width:100%;margin-bottom:0">
+            <div class="qr-blink" id="qr-blink"></div>
+            <div class="status-text" id="qr-status-text">Waiting for mobile device...</div>
+            <div style="margin-left:auto;font-family:var(--font-mono);font-size:11px;
+                        color:var(--text-muted)" id="qr-timer"></div>
+          </div>
+          <div class="timer-bar-wrap" style="width:100%">
+            <div class="timer-bar" id="timer-bar"></div>
+          </div>
+        </div>
+        <div class="btn-row" style="margin-top:16px">
+          <button class="btn btn-ghost" onclick="App.goBack()">← Back</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUCCESS -->
+  <div id="screen-success" class="screen">
+    <div class="card"><div class="corner-bl"></div>
+      <div class="card-inner">
+        <div class="card-title">Verification Complete</div>
+        <div class="divider" style="margin-top:16px"></div>
+        <div class="success-wrap">
+          <div class="success-ring">✓</div>
+          <div class="success-title">Identity Verified</div>
+          <div class="success-sub font-mono" id="success-method"></div>
+          <div class="success-bar-wrap" style="margin-top:8px">
+            <div class="success-bar"></div>
+          </div>
+          <div class="success-sub font-mono" style="animation-delay:0.8s">
+            Unlocking workstation...
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div id="dev-bar" style="display:none">
+  <button class="dev-btn" onclick="App.devUnlock()">✓ SIMULATE</button>
+  <button class="dev-btn" onclick="App.devExit()">⏻ EXIT</button>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
