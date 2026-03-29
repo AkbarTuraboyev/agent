@@ -12,6 +12,7 @@ a = Analysis(
         ('ui/overlay.html', 'ui'),
         ('ui/style.css',    'ui'),
         ('ui/app.js',       'ui'),
+        ('ui/qrcode.min.js','ui'),
         *collect_data_files('webview'),
     ],
     hiddenimports=[

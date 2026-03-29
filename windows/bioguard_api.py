@@ -1,5 +1,7 @@
 """
 windows/bioguard_api.py — pywebview JS API klassi (BioGuardAPI).
+
+JavaScript tomonidan chaqiriladigan barcha metodlar shu yerda joylashgan.
 """
 
 import json
@@ -13,15 +15,17 @@ from core.taskbar import show_taskbar
 from windows.overlay import destroy_overlays
 from api.client import api_post, api_get
 from api.camera import check_camera
-import windows.session_monitor as _sm
 
 
 class BioGuardAPI:
+    """pywebview orqali JavaScript bilan bog'liq barcha amallar."""
+
     def __init__(self, window_ref):
         self._window     = window_ref
         self._session_id = None
         self._polling    = False
 
+    # ── Konfiguratsiya ────────────────────────────────────────────
     def get_config(self) -> str:
         return json.dumps({
             "username":  USERNAME,
@@ -29,6 +33,7 @@ class BioGuardAPI:
             "dev_mode":  DEV_MODE,
         })
 
+    # ── Sessiya ───────────────────────────────────────────────────
     def start_session(self):
         def _run():
             try:
@@ -39,6 +44,7 @@ class BioGuardAPI:
                 self._js(f"App.onError('Session failed: {self._esc(str(e))}')")
         threading.Thread(target=_run, daemon=True).start()
 
+    # ── Yuz tanish (kamera orqali) ────────────────────────────────
     def capture_face(self, image_b64: str):
         def _run():
             try:
@@ -58,6 +64,7 @@ class BioGuardAPI:
                 self._js(f"App.onFaceRetry('{self._esc(str(e))}')")
         threading.Thread(target=_run, daemon=True).start()
 
+    # ── Yuz tanish (QR / telefon orqali) ─────────────────────────
     def start_face_qr_poll(self):
         if not self._session_id:
             self._js("App.onError('No session')")
@@ -91,6 +98,7 @@ class BioGuardAPI:
             self._polling = False
             self._js("App.onQRExpired()")
 
+    # ── Barmoq izi (QR / telefon orqali) ─────────────────────────
     def start_finger_poll(self):
         if not self._session_id:
             self._js("App.onError('No session')")
@@ -127,17 +135,17 @@ class BioGuardAPI:
             self._polling = False
             self._js("App.onQRExpired()")
 
+    # ── Qulfni ochish / chiqish ───────────────────────────────────
     def hide_lock(self):
-        """Qulfni yashiradi — dastur xotirada qoladi, keyingi lock da qayta chiqadi."""
+        """Qulfni yashiradi va tizimni normal holatga qaytaradi."""
         stop_keyboard_block()
         stop_fullscreen_monitor()
         show_taskbar()
         destroy_overlays()
-        _sm.set_hidden(True)   # session_monitor ga xabar beramiz
         self._window.hide()
 
     def dev_exit(self):
-        """DEV rejimida to'liq yopadi."""
+        """DEV rejimida — hammani to'liq yopadi (debug uchun)."""
         if DEV_MODE:
             stop_keyboard_block()
             stop_fullscreen_monitor()
@@ -145,6 +153,7 @@ class BioGuardAPI:
             destroy_overlays()
             self._window.destroy()
 
+    # ── Yordamchi metodlar ────────────────────────────────────────
     def _js(self, code: str):
         try:
             self._window.evaluate_js(code)
