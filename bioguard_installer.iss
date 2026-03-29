@@ -56,11 +56,6 @@ Root: HKLM; Subkey: "SOFTWARE\AD BioGuard"; \
   ValueData: "{app}"; Flags: uninsdeletekey
 
 [Run]
-; WebView2 Runtime o'rnatish (agar yo'q bo'lsa)
-Filename: "powershell.exe"; \
-  Parameters: "-Command ""$key = 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}'; if (-not (Test-Path $key)) {{ $url='https://go.microsoft.com/fwlink/p/?LinkId=2124703'; $tmp=$env:TEMP+'\webview2.exe'; (New-Object Net.WebClient).DownloadFile($url,$tmp); Start-Process $tmp '/silent /install' -Wait }}"""; \
-  Flags: runhidden; StatusMsg: "Microsoft WebView2 tekshirilmoqda..."
-
 Filename: "{app}\{#MyAppExeName}"; \
   Description: "AD BioGuard ni hozir ishga tushirish"; \
   Flags: nowait postinstall skipifsilent runascurrentuser
