@@ -1,0 +1,32 @@
+# WebView cache (runtime data)
+.webview_data/
+
+# PyInstaller output
+dist/
+build/
+*.spec.bak
+
+# Installer output
+installer_output/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Icon (build vaqtida generatsiya qilinadi)
+icon.ico

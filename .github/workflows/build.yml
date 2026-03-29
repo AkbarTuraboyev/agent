@@ -39,7 +39,7 @@ jobs:
     - name: QRCode.js kutubxonasini yuklab olish
       run: |
         curl -L "https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" -o ui/qrcode.min.js
-        echo "qrcode.min.js yuklab olindi: $(wc -c < ui/qrcode.min.js) bytes"
+        python -c "import os; print('qrcode.min.js yuklab olindi:', os.path.getsize('ui/qrcode.min.js'), 'bytes')"
 
     - name: PyInstaller bilan EXE yaratish
       run: |
