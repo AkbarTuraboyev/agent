@@ -43,7 +43,7 @@ Name: "{group}\Uninstall BioGuard"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Registry]
-; AUTOSTART — har doim yoziladi (Tasks sharti yo'q)
+; AUTOSTART
 Root: HKLM; Subkey: "SOFTWARE\Microsoft\Windows\CurrentVersion\Run"; \
   ValueType: string; ValueName: "ADBioGuard"; \
   ValueData: """{app}\{#MyAppExeName}"""; Flags: uninsdeletevalue
@@ -57,6 +57,11 @@ Root: HKLM; Subkey: "SOFTWARE\AD BioGuard"; \
   ValueData: "{app}"; Flags: uninsdeletekey
 
 [Run]
+; WebView2 Runtime o'rnatish (agar yo'q bo'lsa)
+Filename: "powershell.exe"; \
+  Parameters: "-Command ""if (-not (Get-ItemProperty 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}' -ErrorAction SilentlyContinue)) {{ $url='https://go.microsoft.com/fwlink/p/?LinkId=2124703'; $tmp=[System.IO.Path]::GetTempFileName()+'.exe'; (New-Object Net.WebClient).DownloadFile($url,$tmp); Start-Process $tmp '/silent /install' -Wait; Remove-Item $tmp }}"""; \
+  Flags: runhidden; StatusMsg: "Microsoft WebView2 tekshirilmoqda..."
+
 Filename: "{app}\{#MyAppExeName}"; \
   Description: "AD BioGuard ni hozir ishga tushirish"; \
   Flags: nowait postinstall skipifsilent runascurrentuser

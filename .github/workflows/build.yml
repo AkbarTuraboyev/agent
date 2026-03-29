@@ -21,7 +21,7 @@ jobs:
 
     - name: Kutubxonalar o'rnatish
       run: |
-        pip install pywebview>=4.4.1 pywin32 keyboard opencv-python>=4.8.0 Pillow>=10.0.0 pyinstaller
+        pip install "pywebview>=4.4.1" pywin32 keyboard "opencv-python>=4.8.0" "Pillow>=10.0.0" pyinstaller
 
     - name: Icon yaratish
       run: |
@@ -39,7 +39,7 @@ jobs:
     - name: QRCode.js kutubxonasini yuklab olish
       run: |
         curl -L "https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" -o ui/qrcode.min.js
-        python -c "import os; print('qrcode.min.js yuklab olindi:', os.path.getsize('ui/qrcode.min.js'), 'bytes')"
+        python -c "import os; print('qrcode.min.js:', os.path.getsize('ui/qrcode.min.js'), 'bytes')"
 
     - name: PyInstaller bilan EXE yaratish
       run: |

@@ -92,13 +92,22 @@ def main():
     # Sessiya monitor (Lock/Unlock hodisalari)
     start_session_monitor()
 
-    webview.start(
-        debug=DEV_MODE,
-        private_mode=False,
-        storage_path=data_dir,
-    )
+    # EdgeChromium (WebView2) majburlanadi — mshtml/IE dan qochish uchun
+    try:
+        webview.start(
+            gui='edgechromium',
+            debug=DEV_MODE,
+            private_mode=False,
+            storage_path=data_dir,
+        )
+    except Exception as e:
+        print(f"[webview] edgechromium failed: {e}, fallback to default")
+        webview.start(
+            debug=DEV_MODE,
+            private_mode=False,
+            storage_path=data_dir,
+        )
 
 
 if __name__ == "__main__":
     main()
-
