@@ -43,7 +43,6 @@ Name: "{group}\Uninstall BioGuard"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Registry]
-; AUTOSTART
 Root: HKLM; Subkey: "SOFTWARE\Microsoft\Windows\CurrentVersion\Run"; \
   ValueType: string; ValueName: "ADBioGuard"; \
   ValueData: """{app}\{#MyAppExeName}"""; Flags: uninsdeletevalue
@@ -59,7 +58,7 @@ Root: HKLM; Subkey: "SOFTWARE\AD BioGuard"; \
 [Run]
 ; WebView2 Runtime o'rnatish (agar yo'q bo'lsa)
 Filename: "powershell.exe"; \
-  Parameters: "-Command ""if (-not (Get-ItemProperty 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}' -ErrorAction SilentlyContinue)) {{ $url='https://go.microsoft.com/fwlink/p/?LinkId=2124703'; $tmp=[System.IO.Path]::GetTempFileName()+'.exe'; (New-Object Net.WebClient).DownloadFile($url,$tmp); Start-Process $tmp '/silent /install' -Wait; Remove-Item $tmp }}"""; \
+  Parameters: "-Command ""$key = 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}'; if (-not (Test-Path $key)) {{ $url='https://go.microsoft.com/fwlink/p/?LinkId=2124703'; $tmp=$env:TEMP+'\webview2.exe'; (New-Object Net.WebClient).DownloadFile($url,$tmp); Start-Process $tmp '/silent /install' -Wait }}"""; \
   Flags: runhidden; StatusMsg: "Microsoft WebView2 tekshirilmoqda..."
 
 Filename: "{app}\{#MyAppExeName}"; \
