@@ -6,29 +6,23 @@ main.py — Asosiy kirish nuqtasi
 import os
 import sys
 import traceback
+import datetime
 
-# Log faylga yozish (debug uchun)
+# Log faylga yozish
 _log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bioguard.log")
 def log(msg):
     try:
         with open(_log_path, "a", encoding="utf-8") as f:
-            import datetime
             f.write(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] {msg}\n")
     except Exception:
         pass
 
 log("=== BioGuard start ===")
 log(f"Python: {sys.version}")
-log(f"CWD: {os.getcwd()}")
 
-try:
-    import webview
-    log(f"pywebview version: {webview.__version__}")
-except Exception as e:
-    log(f"webview import error: {e}")
-    sys.exit(1)
+import webview
+log("webview imported OK")
 
-# DPI awareness ENG BIRINCHI chaqirilishi kerak
 from core.dpi import set_dpi_awareness
 set_dpi_awareness()
 log("DPI set")
@@ -37,13 +31,13 @@ from core.config import DEV_MODE, USERNAME
 from core.keyboard import start_keyboard_block, stop_keyboard_block
 from core.taskbar import hide_taskbar, show_taskbar
 from core.monitors import get_all_monitors, start_fullscreen_monitor, stop_fullscreen_monitor
-
 from api.camera import write_chromium_camera_pref
-
 from windows.bioguard_api import BioGuardAPI
 from windows.overlay import create_overlays, destroy_overlays
 from windows.session_monitor import start_session_monitor
 import windows.session_monitor as _sm
+
+log("all imports OK")
 
 
 def main():
@@ -55,23 +49,16 @@ def main():
     monitors = get_all_monitors()
     primary  = monitors[0] if monitors else (0, 0, 1920, 1080)
     px, py, pw, ph = primary
-    log(f"primary monitor: x={px} y={py} w={pw} h={ph}, total monitors={len(monitors)}")
+    log(f"monitors={len(monitors)}, primary: {px},{py} {pw}x{ph}")
 
     base_dir = os.path.dirname(os.path.abspath(__file__))
 
-    # Ikkinchi monitor overlay — hozircha o'chirilgan (debug)
-    # if len(monitors) > 1:
-    #     create_overlays(monitors[1:], base_dir)
+    if len(monitors) > 1:
+        create_overlays(monitors[1:], base_dir)
 
     ui_path = os.path.join(base_dir, "ui", "index.html")
     url     = "file:///" + ui_path.replace("\\", "/")
-    log(f"UI url: {url}")
-    log(f"UI exists: {os.path.exists(ui_path)}")
-
-    # ui papkasidagi fayllarni log
-    ui_dir = os.path.join(base_dir, "ui")
-    if os.path.exists(ui_dir):
-        log(f"ui/ files: {os.listdir(ui_dir)}")
+    log(f"url: {url}, exists: {os.path.exists(ui_path)}")
 
     window = webview.create_window(
         "AD BioGuard",
@@ -123,7 +110,7 @@ def main():
 
     start_session_monitor()
 
-    log("calling webview.start(gui='edgechromium')")
+    log("starting webview with edgechromium...")
     try:
         webview.start(
             gui='edgechromium',
@@ -131,19 +118,16 @@ def main():
             private_mode=False,
             storage_path=data_dir,
         )
-        log("webview.start() returned normally")
+        log("webview.start() done")
     except Exception as e:
-        log(f"edgechromium FAILED: {e}")
+        log(f"edgechromium error: {e}")
         log(traceback.format_exc())
         log("trying default engine...")
-        try:
-            webview.start(
-                debug=False,
-                private_mode=False,
-                storage_path=data_dir,
-            )
-        except Exception as e2:
-            log(f"default also FAILED: {e2}")
+        webview.start(
+            debug=False,
+            private_mode=False,
+            storage_path=data_dir,
+        )
 
 
 if __name__ == "__main__":
