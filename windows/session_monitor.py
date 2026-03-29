@@ -1,7 +1,5 @@
 """
 windows/session_monitor.py — Windows sessiya hodisalarini kuzatish.
-
-Lock / Unlock hodisalari ushlab olinadi va BioGuard qayta ishga tushiriladi.
 """
 
 import os
@@ -22,13 +20,22 @@ WM_WTSSESSION_CHANGE = 0x02B1
 WTS_SESSION_LOCK     = 0x7
 WTS_SESSION_UNLOCK   = 0x8
 
-# Asosiy oyna va API ob'ektlari tashqaridan o'rnatiladi
 MAIN_WINDOW = None
 MAIN_API    = None
 
+# Dastur yashirilgan (qulf ochilgan) — qayta ishga tushirmaslik uchun
+_is_hidden = False
+
+
+def set_hidden(val: bool):
+    global _is_hidden
+    _is_hidden = val
+
 
 def relock_system():
-    """Tizim qulflanganda ekranni yana BioGuard bilan to'sib qo'yadi."""
+    global _is_hidden
+    _is_hidden = False
+
     destroy_overlays()
     hide_taskbar()
     start_keyboard_block()
@@ -60,19 +67,12 @@ def relock_system():
 
 
 def run_session_monitor():
-    """
-    Sessiya hodisalarini tinglovchi oynani yaratadi va xabar loopini ishga tushiradi.
-    Bu funksiya alohida daemon thread'da chaqirilishi kerak.
-    """
-
     class SessionWatcher:
         def __init__(self):
             message_map = {WM_WTSSESSION_CHANGE: self.on_session_change}
-
             wc = win32gui.WNDCLASS()
-            wc.lpfnWndProc  = message_map
+            wc.lpfnWndProc   = message_map
             wc.lpszClassName = "BioGuardSessionWatcher"
-
             self.classAtom = win32gui.RegisterClass(wc)
             self.hwnd = win32gui.CreateWindow(
                 self.classAtom, "BioGuardSessionWatcher",
@@ -85,8 +85,9 @@ def run_session_monitor():
         def on_session_change(self, hwnd, msg, wparam, lparam):
             if wparam == WTS_SESSION_UNLOCK:
                 print("UNLOCK DETECTED")
-                if not find_bioguard_hwnd():
-                    os.startfile(sys.argv[0])
+                # os.startfile YO'Q — sonsiz loop bo'lardi
+                if _is_hidden and MAIN_WINDOW:
+                    relock_system()
             elif wparam == WTS_SESSION_LOCK:
                 print("LOCK DETECTED")
                 relock_system()
@@ -97,5 +98,4 @@ def run_session_monitor():
 
 
 def start_session_monitor():
-    """Sessiya monitorini fon thread'da ishga tushiradi."""
     threading.Thread(target=run_session_monitor, daemon=True).start()
