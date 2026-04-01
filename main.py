@@ -65,6 +65,24 @@ def main():
 
     _sm.MAIN_WINDOW = window
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    ;
+
+    
+
     def _on_closed():
         stop_keyboard_block()
         stop_fullscreen_monitor()
